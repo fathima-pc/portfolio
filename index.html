@@ -435,9 +435,9 @@
             status.textContent = '';
 
             try {
-                const { data, error } = await supabaseClient
+                const { error } = await supabaseClient
                     .from('backend')
-                    .insert([{ name, email, message }], { returning: 'minimal' });
+                    .insert([{ name, email, message }]);
 
                 if (error) {
                     console.error('Supabase Error:', error);
