@@ -437,7 +437,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('backend')
-                    .insert([{ name, email, message }]);
+                    .insert([{ name, email, message }], { returning: 'minimal' });
 
                 if (error) {
                     console.error('Supabase Error:', error);
