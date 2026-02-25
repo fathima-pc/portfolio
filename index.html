@@ -430,6 +430,17 @@
             const status = document.getElementById('formStatus');
             const btn = document.getElementById('submitBtn');
 
+            // Check if running from file:// (will always fail)
+            if (window.location.protocol === 'file:') {
+                status.style.color = '#ff6b6b';
+                status.innerHTML = `
+                    ❌ <b>Cannot send: file:// is blocked by browsers!</b><br>
+                    <div style="background:rgba(255,100,100,0.1);padding:10px;border-radius:8px;margin-top:10px;text-align:left;font-size:13px;">
+                        <b>Fix:</b> Open in VS Code → click <b>"Go Live"</b> (bottom right) → use the <b>127.0.0.1</b> browser tab instead.
+                    </div>`;
+                return;
+            }
+
             btn.disabled = true;
             btn.textContent = 'Sending...';
             status.textContent = '';
@@ -439,33 +450,33 @@
                     .from('backend')
                     .insert([{ name, email, message }]);
 
+                // In Supabase v2, network errors surface as error objects
                 if (error) {
-                    console.error('Supabase Error:', error);
-                    status.style.color = '#ff6b6b';
-                    status.innerHTML = `❌ <b>Error:</b> ${error.message} (${error.code})<br><small>Hint: Ensure the "backend" table and RLS policies are set up.</small>`;
+                    const isNetworkErr = error.message && error.message.toLowerCase().includes('failed to fetch');
+                    if (isNetworkErr) {
+                        status.style.color = '#ff6b6b';
+                        status.innerHTML = `
+                            ❌ <b>Network Error — cannot reach Supabase.</b><br>
+                            <div style="background:rgba(255,100,100,0.1);padding:10px;border-radius:8px;margin-top:10px;text-align:left;font-size:13px;">
+                                Possible causes:<br>
+                                1. ⚠️ <b>Supabase project is paused</b> (free tier pauses after inactivity) — visit <a href="https://supabase.com/dashboard" target="_blank">supabase.com/dashboard</a> and click <b>Restore</b>.<br>
+                                2. 🌐 No internet connection.<br>
+                                3. 🔒 Running from <b>file://</b> — use VS Code Live Server instead.
+                            </div>`;
+                    } else {
+                        console.error('Supabase Error:', error);
+                        status.style.color = '#ff6b6b';
+                        status.innerHTML = `❌ <b>Error ${error.code}:</b> ${error.message}`;
+                    }
                 } else {
-                    status.style.color = '#6fffb0';
+                    status.style.color = 'green';
                     status.textContent = '✅ Message sent successfully!';
                     document.getElementById('contactForm').reset();
                 }
             } catch (err) {
-                console.error('Network/Unexpected Error:', err);
+                console.error('Unexpected Error:', err);
                 status.style.color = '#ff6b6b';
-
-                if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
-                    status.innerHTML = `
-                        ❌ <b>NETWORK ERROR: BROWSERS BLOCK THIS!</b><br>
-                        <div style="background: rgba(255,100,100,0.1); padding: 10px; border-radius: 8px; margin-top: 10px; text-align: left; font-size: 13px; font-weight: 400;">
-                            <b>Why it failed:</b> You are running the file directly from your computer (file://).<br><br>
-                            <b>How to fix it:</b><br>
-                            1. Open VS Code.<br>
-                            2. Click <b>"Go Live"</b> at the bottom right.<br>
-                            3. Test the form in the new "127.0.0.1" browser tab.
-                        </div>
-                    `;
-                } else {
-                    status.textContent = '❌ An unexpected error occurred. Please check your internet.';
-                }
+                status.textContent = `❌ Unexpected error: ${err.message}`;
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Send Message';
