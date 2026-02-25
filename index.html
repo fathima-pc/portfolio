@@ -413,8 +413,10 @@
         });
 
         // Supabase Integration
-        const SUPABASE_URL = 'https://xkwaymypjxcjstyqscfc.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhrd2F5bXlwanhjanN0eXFzY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MTEwMzAsImV4cCI6MjA4NzQ4NzAzMH0.joGNtaBx84RrZGs3VyS07Msn2aiT4mQY7lCjlc6rtOY';
+        // Initialize Supabase
+        const supabaseUrl = 'https://xkwaymypjxcjstyqscfc.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhrd2F5bXlwanhjanN0eXFzY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MTEwMzAsImV4cCI6MjA4NzQ4NzAzMH0.joGNtaBx84RrZGs3VyS07Msn2aiT4mQY7lCjlc6rtOY';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         document.getElementById('contactForm').addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -429,30 +431,36 @@
             btn.textContent = 'Sending...';
             status.textContent = '';
 
-            try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/backend`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({ name, email, message })
-                });
+            // Protocol Check (CORS issue detection)
+            if (window.location.protocol === 'file:') {
+                console.warn('Running from file:// protocol. This may cause CORS issues with Supabase.');
+            }
 
-                if (response.ok) {
-                    status.style.color = '#6fffb0';
-                    status.textContent = '✅ Message sent successfully! I will get back to you soon.';
-                    document.getElementById('contactForm').reset();
-                } else {
-                    const err = await response.json();
+            try {
+                const { data, error } = await supabaseClient
+                    .from('backend')
+                    .insert([{ name, email, message }]);
+
+                if (error) {
+                    console.error('Supabase Error:', error);
                     status.style.color = '#ff6b6b';
-                    status.textContent = '❌ Failed to send: ' + (err.message || 'Unknown error');
+                    status.textContent = `❌ Error: ${error.message} (${error.code})`;
+
+                    // Specific hints
+                    if (error.code === '42P01') {
+                        status.textContent += ' - Table "backend" not found.';
+                    } else if (error.code === '42501') {
+                        status.textContent += ' - Permission denied (check RLS policies).';
+                    }
+                } else {
+                    status.style.color = '#6fffb0';
+                    status.textContent = '✅ Message sent successfully!';
+                    document.getElementById('contactForm').reset();
                 }
             } catch (err) {
+                console.error('Unexpected Error:', err);
                 status.style.color = '#ff6b6b';
-                status.textContent = '❌ Network error. Please try again.';
+                status.textContent = '❌ An unexpected error occurred. Check console.';
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Send Message';
