@@ -365,30 +365,34 @@
             </div>
 
             <!-- CONTACT FORM -->
-            <form class="contact-form" id="contactForm">
-                <input type="text" id="inputName" placeholder="Your Name" required>
-                <input type="email" id="inputEmail" placeholder="Your Email" required>
-                <textarea id="inputMessage" placeholder="Your Message" rows="5" required></textarea>
-                <button type="submit" id="submitBtn">Send Message</button>
-                <p id="formStatus" style="margin-top: 15px; font-size: 14px;"></p>
-            </form>
-
-            <!-- SOCIAL BUTTONS -->
-            <div class="contact-buttons">
-
-                <a href="mailto:yourmail@example.com" class="contact-btn">
-                    Email
-                </a>
-
-                <a href="https://github.com/yourusername" target="_blank" class="contact-btn">
-                    GitHub
-                </a>
-
-                <a href="#" target="_blank" class="contact-btn">
-                    LinkedIn
-                </a>
-
+            <div class="section">
+                <h2>Contact Me</h2>
+                <form class="contact-form" id="contactForm">
+                    <input type="text" id="inputName" placeholder="Your Name" required>
+                    <input type="email" id="inputEmail" placeholder="Your Email" required>
+                    <textarea rows="5" id="inputMessage" placeholder="Your Message" required></textarea>
+                    <button type="submit" id="submitBtn">Send Message</button>
+                </form>
+                <p id="formStatus" style="margin-top:12px;font-weight:600;text-align:center;"></p>
             </div>
+
+        </div>
+        <!-- SOCIAL BUTTONS -->
+        <div class="contact-buttons">
+
+            <a href="mailto:yourmail@example.com" class="contact-btn">
+                Email
+            </a>
+
+            <a href="https://github.com/yourusername" target="_blank" class="contact-btn">
+                GitHub
+            </a>
+
+            <a href="#" target="_blank" class="contact-btn">
+                LinkedIn
+            </a>
+
+        </div>
 
         </div>
     </section>
@@ -412,7 +416,6 @@
             });
         });
 
-        // Supabase Integration
         // Initialize Supabase
         const supabaseUrl = 'https://xkwaymypjxcjstyqscfc.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhrd2F5bXlwanhjanN0eXFzY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MTEwMzAsImV4cCI6MjA4NzQ4NzAzMH0.joGNtaBx84RrZGs3VyS07Msn2aiT4mQY7lCjlc6rtOY';
@@ -431,11 +434,6 @@
             btn.textContent = 'Sending...';
             status.textContent = '';
 
-            // Protocol Check (CORS issue detection)
-            if (window.location.protocol === 'file:') {
-                console.warn('Running from file:// protocol. This may cause CORS issues with Supabase.');
-            }
-
             try {
                 const { data, error } = await supabaseClient
                     .from('backend')
@@ -444,23 +442,30 @@
                 if (error) {
                     console.error('Supabase Error:', error);
                     status.style.color = '#ff6b6b';
-                    status.textContent = `❌ Error: ${error.message} (${error.code})`;
-
-                    // Specific hints
-                    if (error.code === '42P01') {
-                        status.textContent += ' - Table "backend" not found.';
-                    } else if (error.code === '42501') {
-                        status.textContent += ' - Permission denied (check RLS policies).';
-                    }
+                    status.innerHTML = `❌ <b>Error:</b> ${error.message} (${error.code})<br><small>Hint: Ensure the "backend" table and RLS policies are set up.</small>`;
                 } else {
                     status.style.color = '#6fffb0';
                     status.textContent = '✅ Message sent successfully!';
                     document.getElementById('contactForm').reset();
                 }
             } catch (err) {
-                console.error('Unexpected Error:', err);
+                console.error('Network/Unexpected Error:', err);
                 status.style.color = '#ff6b6b';
-                status.textContent = '❌ An unexpected error occurred. Check console.';
+
+                if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+                    status.innerHTML = `
+                        ❌ <b>NETWORK ERROR: BROWSERS BLOCK THIS!</b><br>
+                        <div style="background: rgba(255,100,100,0.1); padding: 10px; border-radius: 8px; margin-top: 10px; text-align: left; font-size: 13px; font-weight: 400;">
+                            <b>Why it failed:</b> You are running the file directly from your computer (file://).<br><br>
+                            <b>How to fix it:</b><br>
+                            1. Open VS Code.<br>
+                            2. Click <b>"Go Live"</b> at the bottom right.<br>
+                            3. Test the form in the new "127.0.0.1" browser tab.
+                        </div>
+                    `;
+                } else {
+                    status.textContent = '❌ An unexpected error occurred. Please check your internet.';
+                }
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Send Message';
